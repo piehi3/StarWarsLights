@@ -1,0 +1,79 @@
+body{
+	background-color: #1E1E24;
+}
+
+h1{
+	color: #e4e4e4;
+}
+
+p{
+	color: #e4e4e4;
+}
+
+label{
+  color: #e4e4e4; 
+}
+
+.preview_canvas{
+  width: 100%; /* Full-width */
+  height: 15px; /* Specified height */
+  border: 0px;
+  border-radius: 10px;
+  background-color: #ffffff;
+}
+
+fieldset{
+  color: #e4e4e4;
+  background-color: #397367;
+  border-width: 0pt;
+  border-radius: 10px;
+}
+
+.slider{
+  -webkit-appearance: none;  /* Override default CSS styles */
+  appearance: none;
+  width: 100%; /* Full-width */
+  height: 15px; /* Specified height */
+  background: #35393C; /* Grey background */
+  outline: none; /* Remove outline */
+  opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+  -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+  border-radius: 10px;
+  transition: opacity .2s;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; /* Override default look */
+  appearance: none;
+  width: 20px; /* Set a specific slider handle width */
+  height: 20px; /* Slider handle height */
+  background: #e4e4e4; /* Green background */
+  border-radius: 50%; 
+  cursor: pointer; /* Cursor on hover */
+}
+
+button{
+  border-radius: 10px;
+  color: #e4e4e4;
+  background: #397367;
+  border-color: #397367;
+}
+
+.column {
+  float: left;
+  width: 100%;
+}
+
+.font{
+  font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+}
+
+.card{
+	background-color: #4E6E5D;
+	border-width: 0px;
+	border-radius: 5px;
+}
+
+.card-text{
+	color: #CFCFCF;
+}

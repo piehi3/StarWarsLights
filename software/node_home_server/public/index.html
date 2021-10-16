@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="shortcut icon" href="Temp_Icon.png" type="image/x-icon" />
+    <link rel="stylesheet" href="card_style.css">
+</head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<body class="font">
+
+<h1>Lights</h1>
+
+<canvas id="color_preview", class="preview_canvas">
+</canvas>
+<br>
+
+<div class="column">
+
+<form>
+    <fieldset>
+        <legend>RGB:</legend>
+        <label for="red">Red: </label><label id="red_color_value">0</label><br>
+        <input class="slider" type="range" id="red_color_slider" max="255" min="0" step="1" value="0"><br>
+        <label for="green">Green: </label><label id="green_color_value">0</label><br>
+        <input class="slider" type="range" id="green_color_slider" max="255" min="0" step="1" value="0"><br>
+        <label for="blue">Blue: </label><label id="blue_color_value">0</label><br>
+        <input class="slider" type="range" id="blue_color_slider" max="255" min="0" step="1" value="0"><br>
+    </fieldset>
+</form>
+
+<label for="brightness_slider">Brightness: </label><label id="brightness_value">0%</label><br>
+<input class="slider" type="range" id="brightness_slider" max="1.0" min="0.0" step="0.01" value="1.0"><br>
+
+<label for="pos1_slider">Start Pos: </label><label id="pos1_value">0</label><br>
+<input class="slider" type="range" id="pos1_slider" max="50" min="0" step="1" value="0"><br>
+
+<label for="pos2_slider">Stop Pos: </label><label id="pos2_value">0</label><br>
+<input class="slider" type="range" id="pos2_slider" max="50" min="0" step="1" value="50"><br>
+
+<br>
+
+<button type="button" id="onButton" class="font">ON</button>
+<button type="button" id="offButton" class="font">OFF</button>
+
+</div>
+
+<canvas id="color_wheel" width="200" height="200" style="border:1px solid #ffffff;">
+</canvas>
+
+<form>
+    <label for="quantity">Timer (min)</label><br>
+    <input type="number"  id="timer_quantity" name="timer" min="0.0" step="0.01" value=5.0><br>
+    <input type="button"  id="timer_start" value="START"><br>
+    <input type="button"  id="timer_stop" value="STOP">
+</form>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+
+    function componentToHex(c) {
+        var hex = c.toString(16);
+        return hex.length == 1 ? "0" + hex : hex;
+    }
+
+    function rgbToHex(r, g, b) {
+        return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+    }
+
+    var color_wheel_canvas = document.getElementById("color_wheel");
+    var color_wheel_img = new Image();
+    var color_preview = document.getElementById("color_preview");
+    var ctx_preview = color_preview.getContext("2d");
+
+    color_wheel_img.width = color_wheel_canvas.width;
+    color_wheel_img.height = color_wheel_img.height;
+
+    color_wheel_img.onload = function() { 
+        color_wheel_canvas.getContext("2d").drawImage(color_wheel_img,0,0,color_wheel_canvas.width,color_wheel_canvas.height);
+    };
+    color_wheel_img.src = "color_wheel.png";
+
+    var redSliderLabel = document.getElementById("red_color_value"), redSlider = document.getElementById("red_color_slider");
+    var greenSliderLabel = document.getElementById("green_color_value"), greenSlider = document.getElementById("green_color_slider");
+    var blueSliderLabel = document.getElementById("blue_color_value"), blueSlider = document.getElementById("blue_color_slider");
+    var onButton = document.getElementById("onButton"), offButton = document.getElementById("offButton");
+    var brightnessSliderLabel = document.getElementById("brightness_value"), brightnessSlider = document.getElementById("brightness_slider");
+    var pos1SliderLabel = document.getElementById("pos1_value"), pos1Slider = document.getElementById("pos1_slider");
+    var pos2SliderLabel = document.getElementById("pos2_value"), pos2Slider = document.getElementById("pos2_slider");
+    var timerStart = document.getElementById("timer_start");
+    var timerStop = document.getElementById("timer_stop");
+    var timerInput = document.getElementById("timer_quantity");
+
+
+    var socket = io(); //load socket.io-client  and connect to th host of the pag
+
+    function send_update(){
+        var start_pos = pos1Slider.value;
+        var stop_pos =  pos2Slider.value;
+        if(stop_pos-start_pos>0){
+            socket.emit("ledUpdate",{id: 1, red : redSlider.value , green : greenSlider.value , blue : blueSlider.value , brighness :  brightnessSlider.value,start : start_pos, stop : stop_pos-1});
+        }
+       
+    }
+
+    function update_brightness_slider(r,g,b){
+        brightnessSlider.value = Math.round(Math.max(r,g,b)*100/255)/100;
+        brightnessSliderLabel.innerHTML = Math.round(brightnessSlider.value*100)+"%";
+    }
+
+    function update_pos_slider(pos1,pos2){
+        pos1Slider.value = pos1;
+        pos1SliderLabel.innerHTML = pos1;
+        pos2Slider.value = pos2+1;
+        pos2SliderLabel.innerHTML = pos2;
+    }
+
+    function set_color(r,g,b,brighness=-1,start=0,stop=100){
+        if(brighness!=-1){brightnessSliderLabel.innerHTML=brightnessSlider.value=brighness;}
+        redSliderLabel.innerHTML=redSlider.value=r;
+        greenSliderLabel.innerHTML=greenSlider.value=g;
+        blueSliderLabel.innerHTML=blueSlider.value=b;
+        
+        //ctx_preview;
+        ctx_preview.fillStyle = rgbToHex(parseInt(r),parseInt(g),parseInt(b));
+        ctx_preview.fillRect(0, 0, color_preview.width, color_preview.height);
+        /*if(change_brighness_bar){
+            update_brightness_slider(parseInt(r),parseInt(g),parseInt(b));   
+        }*/
+        if(start!=-1){update_pos_slider(start,stop)};
+    }
+
+    var isMouseDown = false;
+    var offsets = color_wheel_canvas.getBoundingClientRect();
+    var wheel_top = offsets.top;
+    var wheel_left = offsets.left;
+
+    var eventsRy = [{event:"mousedown",func:"onStart"}, 
+                    {event:"touchstart",func:"onStart"},
+                    {event:"mousemove",func:"onMove"},
+                    {event:"touchmove",func:"onMove"},
+                    {event:"mouseup",func:"onEnd"},
+                    {event:"touchend",func:"onEnd"},
+                    {event:"mouseout",func:"onEnd"}];
+
+    function onStart(event) {
+        isMouseDown = true;
+        pos = oMousePos(event);
+        update_color_from_wheel(pos.x, pos.y,100);
+    }
+
+    function onMove(event) {
+        if (isMouseDown) {
+            pos = oMousePos(event);
+            update_color_from_wheel(pos.x, pos.y,100);
+            send_update();
+        }
+    }
+
+    function onEnd(event) {
+        isMouseDown = false;
+        send_update();
+    }
+
+    function oMousePos(event) {
+        var e = event.touches ? event.touches[0] : event;
+
+        return {
+            x: Math.round(e.clientX - wheel_left),
+            y: Math.round(e.clientY - wheel_top)
+        };
+    }
+
+    for (var i = 0; i < eventsRy.length; i++) {
+        (function(i) {
+            var e = eventsRy[i].event;
+            var f = eventsRy[i].func;
+            console.log(f);
+            color_wheel_canvas.addEventListener(e, function(event) {
+                    event.preventDefault();
+                    window[f](event);
+                    return;
+            },false);
+        })(i);
+    }
+    
+    function update_color_from_wheel(dx,dy,r){
+        var sqr_dist = Math.pow(dx-r,2) + Math.pow(dy-r,2);
+        if(sqr_dist > r*r){
+            norm = Math.sqrt(sqr_dist);
+            dx = Math.round( (dx-r)*(r-1)/norm ) + r
+            dy = Math.round( (dy-r)*(r-1)/norm ) + r
+        }
+        var colors = color_wheel_canvas.getContext("2d").getImageData(dx, dy, 1, 1).data;
+        set_color(colors[0],colors[1],colors[2],-1,-1);
+    }
+
+    timerStart.onclick = () => {
+        socket.emit("timerUpdate",{state : 1 , value : parseFloat(timerInput.value)*60000});//converting minutes to ms
+    }
+
+    timerStop.onclick = () => {
+        socket.emit("timerUpdate",{state : 0 , value : -1});
+    }
+
+    offButton.onclick = () => {
+        set_color(0,0,0,0);
+        send_update();
+        socket.emit("psuUpdate",{state : 0});
+    }
+
+    onButton.onclick = () => {
+        socket.emit("psuUpdate",{state : 1});
+        if(brightnessSlider.value!=0){
+            set_color(255,255,255,-1,-1)
+        }else{
+            set_color(255,255,255,255);
+        }
+        send_update();
+    }
+
+    brightnessSlider.oninput = () => {
+        var n = parseFloat(brightnessSlider.value);
+        brightnessSliderLabel.innerHTML = Math.round(n*100)+"%";
+        send_update();
+    };
+
+    pos1Slider.oninput = () => {
+        var n = parseFloat(brightnessSlider.value);
+        pos1SliderLabel.innerHTML = pos1Slider.value;
+        send_update();
+    };
+
+    pos2Slider.oninput = () => {
+        var n = parseFloat(brightnessSlider.value);
+        pos2SliderLabel.innerHTML = pos2Slider.value;
+        send_update();
+    };
+
+    redSlider.oninput = greenSlider.oninput = blueSlider.oninput = () => {
+        set_color(redSlider.value,greenSlider.value,blueSlider.value);
+        send_update();
+    };
+  
+    socket.on('current', function(msg){
+        set_color( msg.red , msg.green , msg.blue , msg.brighness, msg.start, msg.stop);
+    });
+
+</script>
+
+</body>
+</html>
